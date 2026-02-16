@@ -1,0 +1,6 @@
+[submodule "EcoCraftingTool"]
+	path = EcoCraftingTool
+	url = https://github.com/aritchie05/EcoCraftingTool.git
+[submodule "EcoDataReader"]
+	path = EcoDataReader
+	url = https://github.com/aritchie05/EcoDataReader.git
