@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/EcoCalcWorkspace.iml" filepath="$PROJECT_DIR$/.idea/EcoCalcWorkspace.iml" />
+      <module fileurl="file://$PROJECT_DIR$/EcoCraftingTool/EcoCraftingTool.iml" filepath="$PROJECT_DIR$/EcoCraftingTool/EcoCraftingTool.iml" />
     </modules>
   </component>
 </project>
