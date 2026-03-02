@@ -83,6 +83,7 @@ GitHub Actions (in `EcoCraftingTool/.github/workflows/node.js.yml`) runs on push
 
 ### EcoCraftingTool
 
+- **Use Angular CLI** to generate components / services / tests.
 - **OnPush change detection** on every component.
 - **Signals over observables** for component/service state. Use `takeUntilDestroyed()` when observables are unavoidable.
 - **Tailwind classes** preferred over SCSS for styling.
