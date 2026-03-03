@@ -43,7 +43,7 @@ power [eco-calc.com](https://eco-calc.com), a crafting calculator for the game *
 npm ci                  # install dependencies
 npm run start           # dev server at localhost:4200
 npm run build           # production build → dist/eco-crafting-tool/
-npm run test            # Karma/Jasmine tests (watch mode)
+npm run test            # Vite tests
 npm run test-ci         # single-run tests (used in CI)
 ```
 
