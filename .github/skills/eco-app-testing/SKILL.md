@@ -50,15 +50,23 @@ All interactive elements have aria-labels for reliable targeting via `take_snaps
 | Base cost (readonly) | `{ItemName} base cost` | `"Agouti Enchiladas base cost"` |
 | Profit % override | `{ItemName} profit %` | `"Agouti Enchiladas profit %"` |
 | Sale price (readonly) | `{ItemName} sale price` | `"Agouti Enchiladas sale price"` |
+| Info button | `{ItemName} recipe details` | `"Agouti Enchiladas recipe details"` |
 | Remove button | `Remove {ItemName}` | `"Remove Agouti Enchiladas"` |
+| Skill group remove | `Remove {SkillName} skill group` | `"Remove Advanced Cooking skill group"` |
 
 ### Skills Column
 | Element | aria-label Pattern | Example |
 |---------|-------------------|---------|
 | Skill search | `"Search for a skill to add"` | — |
 | Skill level input | `{SkillName} level` | `"Advanced Cooking level"` |
+| Skill remove button | `Remove {SkillName}` | `"Remove Advanced Cooking"` |
 | Table search | `"Search for a crafting table to add"` | — |
 | Table upgrade select | `{TableName} upgrade module` | `"Stove upgrade module"` |
+| Table remove button | `Remove {TableName}` | `"Remove Stove"` |
+
+> **Note**: `mat-select` accessible name shows the *selected value* (e.g., "No Upgrade") rather than
+> the aria-label ("Stove upgrade module"). Find the combobox by its current value or by position
+> relative to the table name.
 
 ### Header
 | Element | aria-label | Notes |
@@ -104,7 +112,7 @@ After adding a recipe, ingredient inputs appear automatically.
 
 ### Setting Multiple Prices Efficiently
 
-Use `fill_form` to set multiple prices at once, then Tab to trigger the last one:
+Use `fill_form` to set multiple prices at once, then Tab and Escape:
 
 ```
 1. take_snapshot → collect UIDs for all ingredient price inputs
@@ -114,6 +122,7 @@ Use `fill_form` to set multiple prices at once, then Tab to trigger the last one
      {uid: "<sun-cheese-uid>", value: "10"}
    ])
 3. press_key(key="Tab") — trigger change detection for the last field
+4. press_key(key="Escape") — close the recipe search dropdown that Tab may open
 ```
 
 ## Workflow: Read Output Cost
@@ -126,11 +135,12 @@ Use `fill_form` to set multiple prices at once, then Tab to trigger the last one
 
 ## Workflow: Switch Server
 
+### Non-Vanilla Server (e.g., White Tiger)
+
 ```
 1. take_snapshot → find the server selector (aria-label: "Select server")
 2. click(uid=<selector-uid>) to open the dropdown
-3. take_snapshot → find the desired server option (e.g., "White Tiger")
-   NOTE: mat-option elements in grouped selects may need evaluate_script:
+3. evaluate_script to find and click the server mat-option:
      () => {
        const options = document.querySelectorAll('mat-option');
        for (const opt of options) {
@@ -145,6 +155,16 @@ Use `fill_form` to set multiple prices at once, then Tab to trigger the last one
 5. wait_for(["Save Connection"]) — connection test completed
 6. take_snapshot → find "Save Connection" button, click it.
 7. Dialog closes. The app now uses server-modified recipe data.
+```
+
+### Vanilla Server (restoring defaults)
+
+```
+1. take_snapshot → find the server selector, click it
+2. evaluate_script to click the "Vanilla" mat-option
+3. A "Restore Default Config" dialog opens (no Test Connection needed)
+4. take_snapshot → click "Save Connection" to restore vanilla data
+5. Dialog closes. The app now uses default recipe data.
 ```
 
 ## Workflow: Vanilla vs Modded Server Comparison Test
@@ -175,6 +195,12 @@ Phase 3: Compare
 - **Price inputs require focusout**: Filling a value alone doesn't trigger Angular's change detection.
   Always Tab or click elsewhere after setting a value.
 - **Deselecting profit checkbox**: Clicking off the default profit field causes it to recalculate.
+
+### Tab Navigation Hazards
+- After filling the **last ingredient price**, Tab moves focus to the **recipe search combobox**,
+  which opens its dropdown. Press `Escape` immediately after Tab to close it.
+- After filling a **skill level**, Tab moves focus to the **skill's remove button**. Do NOT
+  press Enter — it would remove the skill. Click elsewhere instead.
 
 ### mat-option Elements
 - Angular Material dropdown options (`mat-option`) are often NOT visible in the a11y snapshot
