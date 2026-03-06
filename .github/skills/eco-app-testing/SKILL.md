@@ -203,9 +203,15 @@ Phase 3: Compare
   press Enter — it would remove the skill. Click elsewhere instead.
 
 ### mat-option Elements
-- Angular Material dropdown options (`mat-option`) are often NOT visible in the a11y snapshot
-  because they're in a CDK overlay.
-- **Always use `evaluate_script`** with `document.querySelectorAll('mat-option')` to find and click options.
+- Angular Material dropdown options (`mat-option`) are **correctly accessible** with proper ARIA
+  `option` roles. They are NOT missing from the accessibility tree.
+- However, they are filtered out by the **non-verbose** `take_snapshot` mode.
+- **Best approach**: Use `take_snapshot(verbose=true)` when a dropdown is open to see the options,
+  then click by uid. The verbose snapshot is larger (~27KB vs ~3KB) but avoids evaluate_script.
+- **Alternative**: Use `evaluate_script` with `document.querySelectorAll('mat-option')` — faster
+  but less robust since it bypasses the accessibility tree.
+- **`fill()` does NOT work** on mat-select (it's not a native `<select>` element).
+  It does work for mat-autocomplete combobox inputs (typing a search query).
 
 ### UIDs Change on Re-render
 - After any state change (adding a recipe, switching server, changing a price), UIDs in the snapshot
