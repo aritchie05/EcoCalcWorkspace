@@ -5,24 +5,42 @@
 ### Work Completed
 - Added aria-labels to all interactive form elements across the app for Chrome DevTools accessibility
 - Created `.github/skills/eco-app-testing/SKILL.md` skill with documented workflows for automated app testing
+- Tested all 10 skill workflows via Chrome DevTools — all pass
+- Discovered and fixed additional aria-label gaps (remove buttons, info buttons)
+- Updated skill with test findings (Tab hazards, mat-select quirk, Vanilla dialog flow)
 
 ### Accessibility Changes
-Added `aria-label` attributes to these elements:
+Added `aria-label` / `[attr.aria-label]` to these elements:
 - **inputs.component.html**: Ingredient price inputs (`{name} price`), byproduct price inputs (`{name} price`)
-- **outputs.component.html**: Recipe search, base cost (`{name} base cost`), profit override (`{name} profit %`), sale price (`{name} sale price`), remove buttons (`Remove {name}`)
-- **skills.component.html**: Skill search, skill level inputs (`{name} level`), table search, table upgrade selects (`{name} upgrade module`)
+- **outputs.component.html**: Recipe search, base cost, profit %, sale price, remove buttons (`Remove {name}`), info buttons (`{name} recipe details`), skill group remove, sub-recipe buttons
+- **skills.component.html**: Skill/table search, skill level, table upgrade select, skill remove (`Remove {name}`), table remove (`Remove {name}`)
 
-### Eco App Testing Skill
-Created a new skill documenting how to interact with the EcoCraftingTool via Chrome DevTools MCP:
-- Aria-label reference table for all interactive elements
-- Step-by-step workflows: add recipe, set prices, read costs, switch servers, run comparisons
-- Documented interaction quirks (focusout for change detection, mat-option visibility, UID refreshes)
+### Test Results (10/10 pass)
+| Test | Result | Notes |
+|------|--------|-------|
+| aria-labels in snapshot | ✅ | All labels found and descriptive |
+| Set single price | ✅ | fill + Tab triggers focusout |
+| Set multiple prices | ✅ | fill_form + Tab + Escape works |
+| Read output cost | ✅ | Value readable from snapshot attributes |
+| Change profit % | ✅ | fill + Tab updates sale price correctly |
+| Change skill level | ✅ | Level change reduces calorie cost |
+| Change table upgrade | ✅ | evaluate_script needed for mat-option |
+| Remove recipe | ✅ | Aria-labeled button unambiguous |
+| Add recipe | ✅ | Search + evaluate_script for mat-option |
+| Switch server | ✅ | State preserved, cost changes correctly |
+
+### Key Findings
+- mat-select accessible name shows selected value, not aria-label (Angular Material behavior)
+- Tab after last ingredient price opens recipe search dropdown — need Escape
+- Tab after skill level lands on remove button — hazardous
+- Vanilla server dialog differs from non-Vanilla (no Test Connection)
+- mat-option elements never appear in a11y snapshot — always use evaluate_script
 
 ### Files Modified
-- `src/app/crafting/inputs/inputs.component.html` — aria-labels on ingredient/byproduct price inputs
-- `src/app/crafting/outputs/outputs.component.html` — aria-labels on recipe search, costs, profit, remove
-- `src/app/crafting/skills/skills.component.html` — aria-labels on skill/table search, level, upgrade
-- `.github/skills/eco-app-testing/SKILL.md` — new app testing skill
+- `src/app/crafting/inputs/inputs.component.html` — aria-labels on ingredient/byproduct prices
+- `src/app/crafting/outputs/outputs.component.html` — aria-labels on search, costs, profit, remove, info buttons
+- `src/app/crafting/skills/skills.component.html` — aria-labels on search, level, upgrade, remove buttons
+- `.github/skills/eco-app-testing/SKILL.md` — new skill, updated with test findings
 
 ---
 
