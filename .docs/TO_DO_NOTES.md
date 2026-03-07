@@ -1,0 +1,2 @@
+- Hook up translation MCP server and write a skill to generate the message data for the new UI elements
+- Generate message data for new UI elements 

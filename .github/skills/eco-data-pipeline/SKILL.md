@@ -15,31 +15,32 @@ Orchestrates the data pipeline from **EcoDataReader** → **EcoCraftingTool** wh
 
 ## Prerequisites
 
-- Java 17+ and Maven installed (for EcoDataReader)
+- Java 25+ and Maven installed (for EcoDataReader)
 - Node.js 20+ and npm installed (for EcoCraftingTool)
-- The Eco server path in `Main.java` (`ECO_SERVER_PATH`) has been updated to point to the new server version
-- The EcoCraftingTool path in `Main.java` (`ECO_CRAFTING_TOOL_PATH`) points to the correct location
+- `config.properties` created in `EcoDataReader/` with the Eco server and EcoCraftingTool paths (see
+  `config.properties.example`)
 - `npm ci` has been run in the `EcoCraftingTool/` directory
 
 ## Step-by-Step Workflow
 
-### Step 1: Verify Paths in Main.java
+### Step 1: Verify Configuration
 
-Check that the constants at the top of `EcoDataReader/src/main/java/com/apex/Main.java` are correct:
+Check that `EcoDataReader/config.properties` exists and has the correct paths:
 
-```java
-private static final String ECO_SERVER_PATH = "D:\\Eco Servers\\EcoServerPC_v0.12.0.7-beta\\Mods\\__core__\\";
-private static final String ECO_CRAFTING_TOOL_PATH = "C:\\Users\\aritc\\IdeaProjects\\EcoCraftingTool\\src\\assets\\data\\";
+```properties
+eco.server.path=D:\\Eco Servers\\EcoServerPC_v0.12.0.7-beta\\Mods\\__core__
+eco.crafting-tool.path=C:\\Users\\aritc\\IdeaProjects\\EcoCraftingTool\\src\\assets\\data
 ```
 
-Confirm the `ECO_SERVER_PATH` matches the user's downloaded server version.
+If it doesn't exist, copy from `config.properties.example` and update the paths.
+Confirm the `eco.server.path` matches the user's downloaded server version.
 
 ### Step 2: Run EcoDataReader Comparison
 
 From the `EcoDataReader/` directory:
 
 ```bash
-mvn compile exec:java -Dexec.mainClass="com.apex.Main" -q
+mvn compile exec:java
 ```
 
 This runs `compareItemsAndRecipes()` which:
@@ -50,6 +51,7 @@ This runs `compareItemsAndRecipes()` which:
    - `new-recipes.ts` — TypeScript-formatted new recipe entries
    - `new-items.ts` — TypeScript-formatted new item entries
    - `updated-recipes.ts` — recipes with changed properties
+   - `updated-recipes-details.txt` — human-readable field-level diffs for each updated recipe
    - `removed-recipes.txt` — names of recipes no longer in the game
    - `removed-items.txt` — names of items no longer in the game
 5. Prints a summary to stdout
@@ -59,11 +61,12 @@ This runs `compareItemsAndRecipes()` which:
 Read the output files and present a summary to the user:
 
 ```
-EcoDataReader/output/new-recipes.ts    → new recipe entries to add
-EcoDataReader/output/new-items.ts      → new item entries to add
-EcoDataReader/output/updated-recipes.ts → recipes with changed values
-EcoDataReader/output/removed-recipes.txt → recipes to remove
-EcoDataReader/output/removed-items.txt   → items to remove
+EcoDataReader/output/new-recipes.ts              → new recipe entries to add
+EcoDataReader/output/new-items.ts                → new item entries to add
+EcoDataReader/output/updated-recipes.ts          → recipes with changed values
+EcoDataReader/output/updated-recipes-details.txt → field-level diffs (what changed in each recipe)
+EcoDataReader/output/removed-recipes.txt         → recipes to remove
+EcoDataReader/output/removed-items.txt           → items to remove
 ```
 
 **IMPORTANT:** Always show the user what will change before making any modifications.
@@ -127,7 +130,7 @@ If `updated-recipes.ts` contains recipes that changed:
 
 1. For each updated recipe, find the matching entry in `recipes.ts` by `nameID`
 2. Replace the entire recipe object with the updated version
-3. Show the user what changed (the `recipesAreEqual` method in `Recipe.java` logs field-level diffs)
+3. Show the user the diffs from `output/updated-recipes-details.txt` so they can see exactly what changed per recipe
 
 ### Step 7: Handle Removed Items and Recipes
 
