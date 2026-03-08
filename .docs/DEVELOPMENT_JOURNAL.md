@@ -1,5 +1,51 @@
 # Development Journal
 
+## Session: 2026-03-07.3 - Server Dropdown Localization Follow-up
+
+### Work Completed
+
+- Localized the server selector dropdown group headers and the `Add New...` option through `MessageService`
+- Switched server group metadata to message IDs and resolved the group/option labels at render time so stored custom
+  server names remain untouched
+- Added the remaining dropdown message keys and locale values, using Lara Translate for the available locales and short
+  fallback translations for the final blocked locales after Lara quota exhaustion
+
+### Problems & Solutions
+
+- Lara Translate hit the `api_translation_chars` quota while translating the final four locales for the three dropdown
+  labels; the completed Lara output was kept for the translated locales, a retry still failed, and temporary fallback
+  translations were added for Polish, Korean, Chinese, and Japanese so the UI would not ship partially untranslated
+
+### Files Modified
+
+- `EcoCraftingTool/src/app/model/server-api/server-config.ts` - Replaced hardcoded server group names with localized
+  message IDs
+- `EcoCraftingTool/src/app/header/header.component.ts` - Added helper methods to resolve localized server group and
+  option labels
+- `EcoCraftingTool/src/app/header/header.component.html` - Rendered localized server group labels and the localized
+  add-new option in the server selector
+- `EcoCraftingTool/src/app/header/header.component.spec.ts` - Added coverage for localized dropdown labels
+- `EcoCraftingTool/src/app/service/message.service.ts` - Added server dropdown localization keys and translations
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded this follow-up localization session
+
+### Testing
+
+- `npm run build`
+- `npm run test-ci`
+- Manual browser validation on `http://127.0.0.1:4200`:
+  - English locale: server dropdown showed `Predefined Servers`, `Custom Servers`, and `Add New...`
+  - French locale: server dropdown showed `Serveurs prédéfinis`, `Serveurs personnalisés`, and `Ajouter un nouveau...`
+
+### Technical Debt
+
+- Re-run Lara Translate for the Polish, Korean, Chinese, and Japanese dropdown labels once quota is available so those
+  fallback translations can be tool-verified
+
+### Next Steps
+
+- Continue the broader template-localization pass for the remaining non-server hardcoded strings when that follow-up is
+  prioritized
+
 ## Session: 2026-03-07.2 - External Server UI Localization
 
 ### Work Completed
