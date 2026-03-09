@@ -1,5 +1,88 @@
 # Development Journal
 
+## Session: 2026-03-09.2 - Sulfur Output Static Override
+
+### Work Completed
+
+- Extended the inferred server output `IsStatic` exceptions so `Sulfur` is treated as non-static when the same recipe
+  also returns a different additional output
+- Reused the new shared multi-output exception path so the prior Barrel override and the Ashlar/Crushed behavior stay in
+  one place
+- Added regression coverage for both the multi-output Sulfur case and the single-output Sulfur fallback
+
+### Problems & Solutions
+
+- No new implementation issues surfaced; the existing helper introduced for the Barrel follow-up made the Sulfur
+  extension
+  a small, behavior-safe change
+
+### Files Modified
+
+- `EcoCraftingTool/src/app/service/price-calculator-server.service.ts` - Added `Sulfur` to the inferred multi-output
+  non-static exceptions
+- `EcoCraftingTool/src/app/service/price-calculator-server.service.spec.ts` - Added Sulfur-specific regression tests
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded this follow-up output-static session
+
+### Testing
+
+- `npm run build`
+- `npm run test-ci`
+- Manual browser validation on `http://127.0.0.1:4200` via Chrome DevTools:
+    - Confirmed multi-output `Sulfur` recipes infer `IsStatic = false`
+    - Confirmed single-output `Sulfur` recipes still infer `IsStatic = true`
+    - Confirmed the prior multi-output `Barrel` override still infers `IsStatic = false`
+
+### Technical Debt
+
+- None introduced
+
+### Next Steps
+
+- Keep extending the shared inferred-output exception helper if future server data reveals more output-static mismatches
+
+## Session: 2026-03-09.1 - Barrel Output Static Override
+
+### Work Completed
+
+- Extended inferred server output `IsStatic` handling in `PriceCalculatorServerService` so `Barrel` outputs are treated
+  as
+  non-static when a recipe returns `Barrel` alongside other outputs
+- Kept the existing Ashlar/Crushed override intact while extracting the inferred-output-static logic into focused
+  helpers
+- Added unit coverage for the Ashlar byproduct case, the new multi-output Barrel case, and the single-output Barrel
+  fallback
+
+### Problems & Solutions
+
+- The first test run failed because the project uses Vitest-style boolean matchers rather than Jasmine `toBeTrue()` /
+  `toBeFalse()` helpers; the new spec assertions were updated to `toBe(true)` / `toBe(false)` and the suite passed
+
+### Files Modified
+
+- `EcoCraftingTool/src/app/service/price-calculator-server.service.ts` - Added a reusable inferred-output-static helper
+  and the new multi-output Barrel exception
+- `EcoCraftingTool/src/app/service/price-calculator-server.service.spec.ts` - Added regression coverage for inferred
+  output static flags
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded this service update session
+
+### Testing
+
+- `npm run build`
+- `npm run test-ci`
+- Manual browser validation on `http://127.0.0.1:4200` via Chrome DevTools:
+    - Confirmed Ashlar recipes still infer `Crushed` byproducts as `IsStatic = false`
+    - Confirmed multi-output recipes infer `Barrel` outputs as `IsStatic = false`
+    - Confirmed single-output `Barrel` recipes still infer `IsStatic = true`
+
+### Technical Debt
+
+- None introduced
+
+### Next Steps
+
+- If a live external server exposes another mismatched output-static edge case, add it to the same inference helper and
+  extend the regression spec coverage
+
 ## Session: 2026-03-07.3 - Server Dropdown Localization Follow-up
 
 ### Work Completed
