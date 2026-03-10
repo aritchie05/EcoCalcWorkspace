@@ -1,5 +1,259 @@
 # Development Journal
 
+## Session: 2026-03-10.7 - Upgrade 5 Locale Entries
+
+### Work Completed
+
+- Added `ModernUpgrade5`, `BasicUpgrade5`, and `AdvancedUpgrade5` to the final `upgrades` block in `locale-data.ts`
+- Reused the existing translation patterns from the corresponding Upgrade 4 entries, updating only the numeric suffixes
+
+### Problems & Solutions
+
+- The file contains multiple repeated upgrade blocks; updated only the final block at the end of the file as requested
+
+### Files Modified
+
+- `EcoCraftingTool/src/assets/data/locale/locale-data.ts` - Added the three new Upgrade 5 locale entries
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded the locale data update
+
+### Testing
+
+- `npm run build`
+
+### Technical Debt
+
+- `locale-data.ts` contains repeated upgrade sections that are easy to desynchronize if future additions are applied
+  selectively
+
+### Next Steps
+
+- If these new upgrade IDs are needed in earlier repeated locale blocks as well, sync the same entries there too
+
+## Session: 2026-03-10.6 - INP Performance Optimizations Implementation
+
+### Work Completed
+
+- Implemented all 7 prioritized INP performance optimizations from audit sessions .4 and .5
+- **INP improved from 1,543ms → 263ms (83% reduction)** under 4× CPU throttle with 7+ skills loaded
+- Presentation delay improved from 1,232ms → 96ms (92% reduction) — the dominant bottleneck
+- DOM elements reduced from 6,281 → 3,626 (42% reduction) with similar skill count
+
+#### Changes Made
+
+1. **Created `LocaleNumberPipe`** — pure pipe wrapping `toLocaleString` with Angular pipe memoization, replacing method
+   calls in templates
+2. **Replaced readonly `mat-form-field` in outputs** — 3 instances (base cost, sale price, sub-recipe cost) replaced
+   with lightweight `<div class="readonly-field">` elements, eliminating ~45 DOM nodes per recipe
+3. **Replaced readonly `mat-form-field` in recipe-dialog** — all 10 instances replaced with
+   `<span class="readonly-field">`, removed MatFormFieldModule/MatInputModule imports entirely
+4. **Added lazy expansion panels** — `<ng-template matExpansionPanelContent>` defers rendering of collapsed recipe
+   groups; only first group expanded by default
+5. **Debounced `computePricesAsync`** — 150ms debounce via setTimeout/clearTimeout pattern, reads signal deps
+   synchronously then defers computation
+6. **Removed all ~15 `console.debug` calls** per recipe from `computePricesAsync` loop
+7. **Batched signal updates in `selectTable()`** — collects all recipes/skills, updates signals once instead of
+   per-recipe
+8. **Set-based deduplication** in `selectedInputs`/`selectedByproducts` linkedSignals replacing O(n²) `Array.some()`
+9. **Map-based price lookups** in `computePricesAsync` for O(1) instead of O(n) `Array.find()`
+10. **Sorted insertion** at all mutation points (selectSkill, selectTable, selectRecipe), replacing removed sorting
+    effects that wrote to signals they read
+11. **Added `autoFocus: false`** to recipe dialog config to prevent forced reflow on dialog open
+12. **Added global `.readonly-field` and `.readonly-label` CSS** in `styles.scss` for shared readonly styling
+
+### Problems & Solutions
+
+- Initial runtime error `TypeError: Cannot read properties of undefined (reading 'nameID')` after reload — caused by
+  stale persisted state from previous trace session with recipes that had undefined `primaryOutput.item`; resolved by
+  clearing localStorage (pre-existing data integrity issue, not caused by changes)
+- The previous sorting effects wrote to the same signal they read, risking infinite loops — replaced with sorted
+  insertion at each mutation point for deterministic ordering
+
+### Files Modified
+
+- `EcoCraftingTool/src/app/pipe/locale-number.pipe.ts` — New pure pipe for localized number formatting
+- `EcoCraftingTool/src/app/pipe/locale-number.pipe.spec.ts` — 7 tests for the pipe
+- `EcoCraftingTool/src/styles.scss` — Added `.readonly-field` and `.readonly-label` global CSS
+- `EcoCraftingTool/src/app/crafting/outputs/outputs.component.html` — Replaced readonly mat-form-fields, added lazy
+  expansion panels
+- `EcoCraftingTool/src/app/crafting/outputs/outputs.component.ts` — Added LocaleNumberPipe import, autoFocus: false
+- `EcoCraftingTool/src/app/crafting/recipe-dialog/recipe-dialog.component.html` — Replaced all 10 readonly
+  mat-form-fields
+- `EcoCraftingTool/src/app/crafting/recipe-dialog/recipe-dialog.component.ts` — Removed unused Material imports, added
+  LocaleNumberPipe
+- `EcoCraftingTool/src/app/crafting/recipe-dialog/recipe-dialog.component.scss` — Removed dead mat-form-field CSS
+- `EcoCraftingTool/src/app/service/crafting.service.ts` — Debounced effect, removed console.debug, batched selectTable,
+  Set dedup, Map lookups, sorted insertion
+
+### Testing
+
+- All 65 tests pass (including 7 new `LocaleNumberPipe` tests)
+- Build succeeds with no errors
+- Manual verification: added 9 skills, interacted with all UI sections, opened recipe dialogs, updated prices — no
+  console errors
+- Performance trace comparison (4× CPU throttle):
+  | Metric | Before | After | Improvement |
+  |--------|--------|-------|-------------|
+  | INP | 1,543ms 🔴 | 263ms 🟡 | 83% ↓ |
+  | Presentation delay | 1,232ms | 96ms | 92% ↓ |
+  | Processing duration | 300ms | 160ms | 47% ↓ |
+  | DOM elements (8-9 skills) | 6,281 | 3,626 | 42% ↓ |
+
+### Technical Debt
+
+- Remaining editable `mat-form-field` instances in inputs.component.html (173 total) — these are necessary for user
+  input but contribute to DOM size
+- Further DOM reduction possible with virtual scrolling for large recipe/input lists
+- The `selectedInputs`/`selectedByproducts` linkedSignals could benefit from a null guard on
+  `recipe.primaryOutput?.item` for robustness against corrupt persisted state
+
+### Next Steps
+
+- Consider virtual scrolling (`@angular/cdk/scrolling`) for inputs list when many skills selected
+- Consider `@defer` blocks for below-fold content (inputs, outputs sections)
+- Monitor CrUX data after deploy to validate field INP improvement
+
+## Session: 2026-03-10.5 - Performance Audit Trace 2 (Heavy DOM)
+
+### Work Completed
+
+- Set up heavy test scenario: 8 skills (Oil Drilling, Smelting, Masonry, Carpentry, Cooking, Tailoring, Advanced
+  Smelting, Mining), 190 input prices, 60 recipes
+- Ran systematic interactive performance trace with 4× CPU throttling, covering every interaction type left-to-right:
+    - Add/remove skills, change skill levels, add/remove crafting tables, update upgrade modules
+    - Update calories price, default profit, individual input prices (6 items), output profit overrides (2 items)
+    - Open/close recipe detail dialogs (2 times), remove recipes (4 times)
+- **INP: 1,543ms** 🔴 Poor (>500ms) — vs 314ms in lighter trace 1
+- INP breakdown: 12ms input delay, 300ms processing, **1,232ms presentation delay (80%)**
+- DOM: 6,281 elements (↑89% from 3,328), style recalcs affecting 6,872 elements (336ms worst)
+- Forced reflow: 671ms total (removeChild: 652ms, getHighContrastMode: 239ms)
+- **Critical finding: INP scales super-linearly with DOM** — 89% more DOM causes 391% worse INP
+
+### Problems & Solutions
+
+- All findings from Trace 1 confirmed and amplified at scale
+- **Presentation delay dominates** at 80% of total INP — same root cause at any scale
+- Processing duration also grew significantly (42ms → 300ms), confirming `computePricesAsync` overhead with many recipes
+- Forced reflow doubled (286ms → 671ms) because dialog closes force style recalc on more elements
+- The `selected-items-container` div has 129 children — one of the widest DOM nodes
+
+### Files Modified
+
+- `.docs/DEVELOPMENT_JOURNAL.md` — Added this session entry
+- Session plan.md — Updated with Trace 2 comparison data and scaling analysis
+
+### Testing
+
+- Manual Chrome DevTools performance trace with 8 skills loaded, 4× CPU throttling
+- Systematic interaction coverage: all input types from left to right across the entire app
+
+### Technical Debt
+
+- Same items as Session 2026-03-10.4 — all confirmed at larger scale
+
+### Next Steps
+
+- Implement the 7 prioritized recommendations from the audit
+- Priority 1: Replace readonly `mat-form-field` (biggest DOM reduction — targets the 80% presentation delay)
+- Priority 2: Lazy expansion panels (defer rendering of collapsed recipe groups)
+- Priority 3: Debounce `computePricesAsync` (targets the 300ms processing duration)
+- Re-measure after each change to validate improvement
+
+## Session: 2026-03-10.4 - Performance Audit (INP & TBT)
+
+### Work Completed
+
+- Ran Lighthouse audits (100/100 on accessibility, best practices, SEO)
+- Captured performance traces with Chrome DevTools — unthrottled and with 4× CPU throttling
+- Measured INP: 90ms (unthrottled), **314ms** (4× CPU throttle, "Needs Improvement")
+- Identified that **85.7% of INP (269ms) is presentation delay** — style recalculation and layout, not JS processing
+- Analyzed DOM statistics: 3,328 elements, style recalcs affecting 3,694 elements (267ms), forced reflow on dialog
+  close (286ms)
+- Performed full code review of templates, services, and change detection patterns
+- Documented 7 prioritized recommendations in session plan
+
+### Problems & Solutions
+
+- The dominant INP bottleneck is **DOM complexity from readonly `mat-form-field` wrappers** — each adds ~12-15 internal
+  nodes but only displays a static value. Replacing with plain `<span>` elements would eliminate ~960 unnecessary DOM
+  nodes
+- **Expansion panels always expanded** prevents lazy DOM creation for off-screen recipe groups
+- `computePricesAsync` fires on every individual price input change with no debounce, plus ~15 `console.debug` calls per
+  recipe per loop
+- `selectTable()` updates signals inside a loop (per-recipe), causing cascading rerenders instead of batching
+
+### Files Modified
+
+- `.docs/DEVELOPMENT_JOURNAL.md` — Added performance audit session entry
+
+### Testing
+
+- Manual Chrome DevTools performance traces on http://localhost:4200
+- Interactive traces with skill addition, recipe search, price input changes, dialog open/close
+
+### Technical Debt
+
+- Readonly `mat-form-field` wrappers used throughout outputs, inputs, and recipe dialog templates should be replaced
+  with plain elements
+- `computePricesAsync` lacks debouncing and has excessive console.debug calls
+- `selectTable()` and `selectSkill()` methods update signals in loops rather than batching
+- Expansion panels render all content eagerly regardless of collapsed state
+
+### Next Steps
+
+- Implement the 7 prioritized recommendations from the audit (see session plan)
+- Priority 1: Replace readonly `mat-form-field` with plain styled elements
+- Priority 2: Add lazy content to expansion panels
+- Priority 3: Create a `LocaleNumberPipe` for template formatting
+- Re-measure INP after each change to validate improvement
+
+## Session: 2026-03-10.3 - Remote Vercel Proxy Verification
+
+### Work Completed
+
+- Verified the deployed develop site at `https://eco-crafting-tool.vercel.app/` using Chrome DevTools in a clean browser
+  context
+- Confirmed the predefined Greenleaf server now succeeds on the deployed HTTPS app through the new Vercel proxy path
+- Confirmed saving the successful Greenleaf connection updates the selected server in the deployed UI
+
+### Problems & Solutions
+
+- While testing a control case, the predefined White Tiger HTTPS server did not connect from the deployed app because
+  the
+  browser blocked both cross-origin XHR requests due to missing `Access-Control-Allow-Origin` headers; this is separate
+  from the Greenleaf mixed-content fix and indicates a remaining CORS constraint on that server
+
+### Files Modified
+
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded the deployed proxy verification session and the White Tiger CORS finding
+
+### Testing
+
+- Manual browser validation on `https://eco-crafting-tool.vercel.app/` via Chrome DevTools:
+    - Greenleaf predefined server:
+        - `Test Connection` succeeded
+        - Dialog showed `New Items: 228`, `New Recipes: 103`, and `Modified Recipes: 87`
+        - Network requests used `POST https://eco-crafting-tool.vercel.app/api/server-proxy` and returned `200`
+        - `Save Connection` succeeded and the header server selector changed to `Greenleaf`
+    - White Tiger predefined server:
+        - Browser attempted direct `GET https://white-tiger.play.eco/api/v1/plugins/EcoPriceCalculator/allItems`
+          and `/recipes`
+        - Both requests failed with `net::ERR_FAILED`
+        - Console errors reported CORS blocking because no `Access-Control-Allow-Origin` header was present for origin
+          `https://eco-crafting-tool.vercel.app`
+        - Direct top-level navigation to the White Tiger `allItems` endpoint still loaded, confirming the failure is the
+          cross-origin browser fetch, not basic endpoint reachability
+
+### Technical Debt
+
+- White Tiger and any other HTTPS servers without browser CORS support will still fail on the deployed app unless they
+  add
+  CORS headers or are also proxied
+
+### Next Steps
+
+- If desired, extend the proxy strategy beyond HTTP-only servers so deployed HTTPS servers with missing CORS headers can
+  also be routed through the Vercel backend
+
 ## Session: 2026-03-10.2 - Vercel HTTP Server Proxy
 
 ### Work Completed
