@@ -1,5 +1,99 @@
 # Development Journal
 
+## Session: 2026-03-10.2 - Vercel HTTP Server Proxy
+
+### Work Completed
+
+- Added a Vercel serverless proxy endpoint that accepts a validated public `host[:port]`, fetches the fixed Eco Price
+  Calculator `allItems` and `recipes` HTTP endpoints, and returns both payloads in one response
+- Updated `PriceCalculatorServerService` to route insecure HTTP servers through the proxy only when the app itself is
+  running over HTTPS, while preserving the existing direct-request behavior for local HTTP development and normal HTTPS
+  servers
+- Added service tests covering the proxied HTTP path, the non-HTTPS local fallback, and the preserved direct HTTPS path
+
+### Problems & Solutions
+
+- A TypeScript Vercel function would have required additional Node type setup in this frontend package, so the proxy was
+  implemented as a plain JavaScript Vercel function instead to keep the deployment surface simple and avoid unnecessary
+  frontend dependency changes
+- Local Angular dev serving does not host Vercel Functions, so the browser-side manual check focused on confirming the
+  local HTTP app still stays on the direct-request path while unit tests covered the HTTPS/proxy branch selection
+
+### Files Modified
+
+- `EcoCraftingTool/api/server-proxy.js` - Added the Vercel proxy handler with host validation, SSRF guards, and combined
+  upstream fetches
+- `EcoCraftingTool/src/app/model/server-api/server-data-response.ts` - Added the shared combined server data response
+  interface
+- `EcoCraftingTool/src/app/service/price-calculator-server.service.ts` - Routed insecure HTTP servers through the proxy
+  only in HTTPS page contexts
+- `EcoCraftingTool/src/app/service/price-calculator-server.service.spec.ts` - Added proxy path and direct-path
+  regression
+  coverage
+- `EcoCraftingTool/src/environments/environment.ts` - Added the proxy route configuration
+- `EcoCraftingTool/src/environments/environment.preview.ts` - Added the proxy route configuration
+- `EcoCraftingTool/src/environments/environment.prod.ts` - Added the proxy route configuration
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded this proxy implementation session
+
+### Testing
+
+- `npm run build`
+- `npm run test-ci`
+- `node --check api\\server-proxy.js`
+- Proxy handler smoke checks:
+    - `POST` with `localhost:3000` -> `400` (`Local hostnames are not allowed.`)
+    - `POST` with `eco.greenleafserver.com:3021/path` -> `400` (`Host must only contain host[:port].`)
+    - `GET` request -> `405` (`Method not allowed`)
+- Manual browser validation on `http://localhost:4200` via Chrome DevTools:
+    - Confirmed the local app context reports `window.location.protocol === 'http:'`
+    - Confirmed the predefined Greenleaf server still has `useInsecureHttp = true`
+    - Confirmed `PriceCalculatorServerService.shouldUseServerProxy(greenleaf)` returns `false` locally, preserving the
+      existing direct-request behavior during local development
+
+### Technical Debt
+
+- None introduced
+
+### Next Steps
+
+- After deployment, verify the full end-to-end HTTP server flow on a Vercel preview or production domain so the new
+  `/api/server-proxy` route is exercised in a real HTTPS page context
+
+## Session: 2026-03-10.1 - External Server Mixed Content Analysis
+
+### Work Completed
+
+- Investigated why a deployed external server connection fails immediately with `blocked:mixed-content` while the same
+  URL responds when opened directly in the browser
+- Traced the frontend connection flow to the browser-side `HttpClient` request that switches between `http://` and
+  `https://` based on `useInsecureHttp`
+- Wrote a dedicated analysis document in the workspace explaining the root cause, the local-vs-deployed difference, and
+  practical resolution options
+
+### Problems & Solutions
+
+- No code defect was identified in the request flow; the failure is consistent with browser mixed-content blocking when
+  an HTTPS app tries to fetch an HTTP API endpoint
+
+### Files Modified
+
+- `.docs/EXTERNAL_SERVER_MIXED_CONTENT_ANALYSIS.md` - Added the analysis of the mixed-content block and recommended
+  fixes
+- `.docs/DEVELOPMENT_JOURNAL.md` - Recorded this analysis/documentation session
+
+### Testing
+
+- Not run (documentation-only analysis)
+
+### Technical Debt
+
+- None introduced
+
+### Next Steps
+
+- If this external server should work from the deployed app, expose the API through HTTPS or an HTTPS proxy and then
+  verify whether any CORS configuration is also required
+
 ## Session: 2026-03-09.2 - Sulfur Output Static Override
 
 ### Work Completed
